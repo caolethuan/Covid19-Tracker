@@ -5,16 +5,18 @@ const COLORS = {
     
     serious_critical: '#D830EB',
     new_cases: '#FF6178',
-    total_cases_per_1m: '#FEBC3B'
+    total_cases_per_1m: '#FEBC3B',
+    total_deaths_per_1m: '#373c43'
 }
 
 const CASE_STATUS = {
     confirmed: 'confirmed',
     recovered: 'recovered',
     deaths: 'deadths',
-    serious_critical: 'serious_critical',
-    new_cases: 'new_cases',
-    total_cases_per_1m: 'total_cases_per_1m_population'
+    serious_critical: 'Serious_Critical',
+    new_cases: 'NewCases',
+    total_cases_per_1m: 'TotCases_1M_Pop',
+    total_deaths_per_1m: 'Deaths_1M_pop'
 }
 
 let body = document.querySelector('body')
@@ -23,10 +25,13 @@ let countries_list
 
 let summaryData
 
+let summary
+
 let summary_countries
 
 window.onload = async () => {
     console.log('ready . . .')
+  
 
     initCountryFilter()
 
@@ -43,7 +48,7 @@ loadData = async (country) => {
     startLoading()
     
     await loadSummary(country)
-       
+    
     endLoading()
 
 }
@@ -86,45 +91,86 @@ loadSummary = async (country) => {
     //country = slug
 
     summaryData = await covidApi.getSummary()
-    let summary = summaryData["world_total"]
 
+    summary = summaryData.find(e => e['Country']==='World')
     //list name of country
-    countries_list = summaryData["countries_stat"].map(e => e.country_name)
+    countries_list = summaryData.map(e => e["Country"])
+
     //sort list name
     countries_list.sort((a,b) => {
         if(a < b) { return -1; }
         if(a > b) { return 1; }
         return 0
     })
+
+    let indexOfWorld
+    countries_list.find(function(e,index) {
+        indexOfWorld=index
+        return e==='Total:'
+    })
+    delete countries_list[indexOfWorld]
+
+    countries_list.find(function(e,index) {
+        indexOfWorld=index
+        return e==='World'
+    })
+    delete countries_list[indexOfWorld]
+    
     //add world select
     countries_list.unshift('World')
 
-    summary_countries = summaryData["countries_stat"]
 
     if (!isGlobal(country)) {
-        let summary_country = summary_countries.find(function(e) {
-           return e["country_name"] === country
+        summary_country = summaryData.find(function(e) {
+           return e["Country"] === country
         })
         console.log(summary_country)
+        showConfirmedTotal(numberWithCommas(summary_country["TotalCases"]))
+        showRecoveredTotal(numberWithCommas(summary_country["TotalRecovered"]))
+        showDeathsTotal(numberWithCommas(summary_country["TotalDeaths"]))
 
-        showConfirmedTotal(summary_country["cases"])
-        showRecoveredTotal(summary_country["total_recovered"])
-        showDeathsTotal(summary_country["deaths"])
+      
+    } else {
 
-       
+        showConfirmedTotal(numberWithCommas(summary["TotalCases"]))
+        showRecoveredTotal(numberWithCommas(summary["TotalRecovered"]))
+        showDeathsTotal(numberWithCommas(summary["TotalDeaths"]))
+
+     
     }
-    else {
-        showConfirmedTotal(summary["total_cases"])
-        showRecoveredTotal(summary["total_recovered"])
-        showDeathsTotal(summary["total_deaths"])
 
 
+    //Load countries table
+
+    let summary_countries = summaryData
+    let indexOfCountry
+
+    summary_countries.find((e,i) => {
+        indexOfCountry=i
+        return e['Country']==='World'
+    })
+    delete summary_countries[indexOfCountry]
+
+    let casesByCountries = summary_countries.sort((a, b) => b["TotalCases"] - a["TotalCases"])
+
+    let table_countries_body = document.querySelector('#table-contries tbody')
+    table_countries_body.innerHTML = ''
+
+
+    for (let i = 1; i <= 10; i++) {
+        let row = `
+            <tr>
+                <td>${numberWithCommas(casesByCountries[i].Country)}</td>
+                <td>${numberWithCommas(casesByCountries[i].TotalCases)}</td>
+                <td>${numberWithCommas(casesByCountries[i].TotalRecovered)}</td>
+                <td>${numberWithCommas(casesByCountries[i].TotalDeaths)}</td>
+            </tr>
+        `
+        table_countries_body.innerHTML += row
     }
 
 
 }
-
-
 // country select
 renderCountrySelectList = (list) => {
     let country_select_list = document.querySelector('#country-select-list')
