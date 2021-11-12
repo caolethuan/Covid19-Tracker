@@ -7,6 +7,23 @@
   --shadow: 0 0 30px 0 rgb(82 63 105 / 5%);
 }
 
+.country-ranking {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 15px;
+  font-weight: 700;
+  font-size: 1.25rem;
+
+}
+
+.date-updated {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  padding: 0 15px;
+  font-size: 1.25rem;
+}
+
 .dark {
   --bg-body: #151515;
   --bg-content: #242526;
