@@ -31,10 +31,7 @@ let summary_countries
 
 window.onload = async () => {
     console.log('ready . . .')
-  
-
-    initCountryFilter()
-
+   
     await loadData('World')
 
     await loadCountrySelectList()
@@ -48,6 +45,7 @@ loadData = async (country) => {
     startLoading()
     
     await loadSummary(country)
+    
     
     endLoading()
 
@@ -136,7 +134,7 @@ loadSummary = async (country) => {
         showRecoveredTotal(numberWithCommas(summary["TotalRecovered"]))
         showDeathsTotal(numberWithCommas(summary["TotalDeaths"]))
 
-     
+       
     }
 
 
@@ -171,6 +169,7 @@ loadSummary = async (country) => {
 
 
 }
+
 // country select
 renderCountrySelectList = (list) => {
     let country_select_list = document.querySelector('#country-select-list')
