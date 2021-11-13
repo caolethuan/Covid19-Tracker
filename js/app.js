@@ -23,6 +23,8 @@ let body = document.querySelector('body')
 
 let countries_list
 
+let all_time_chart, days_chart, recover_rate_chart
+
 let summaryData
 
 let summary
@@ -31,7 +33,15 @@ let summary_countries
 
 window.onload = async () => {
     console.log('ready . . .')
-   
+    // Only init chart on page loaded fisrt time
+    initTheme()
+
+    initCountryFilter()
+
+    await initAllTimesChart()
+
+    await initRecoveryRate()
+
     await loadData('World')
 
     await loadCountrySelectList()
@@ -46,6 +56,7 @@ loadData = async (country) => {
     
     await loadSummary(country)
     
+    await loadAllTimeChart(country)
     
     endLoading()
 
@@ -82,7 +93,6 @@ showRecoveredTotal = (total) => {
 showDeathsTotal = (total) => {
     document.querySelector('#death-total').textContent = numberWithCommas(total)
 }
-
 
 loadSummary = async (country) => {
 
@@ -127,14 +137,16 @@ loadSummary = async (country) => {
         showRecoveredTotal(numberWithCommas(summary_country["TotalRecovered"]))
         showDeathsTotal(numberWithCommas(summary_country["TotalDeaths"]))
 
-      
+        //Load recover rate country
+        await loadRecoveryRate(Math.round(Number.parseInt(summary_country["TotalRecovered"]) / summary_country["TotalCases"] * 100))
     } else {
 
         showConfirmedTotal(numberWithCommas(summary["TotalCases"]))
         showRecoveredTotal(numberWithCommas(summary["TotalRecovered"]))
         showDeathsTotal(numberWithCommas(summary["TotalDeaths"]))
 
-       
+        //Load recover rate world
+        await loadRecoveryRate(Math.round(Number.parseInt(summary["TotalRecovered"]) /summary["TotalCases"] * 100))
     }
 
 
@@ -166,8 +178,155 @@ loadSummary = async (country) => {
         `
         table_countries_body.innerHTML += row
     }
+}
 
+initAllTimesChart = async () => {
+    let options = {
+        chart: {
+            height: '350',
+            type: 'bar'
+        },
+        colors: [COLORS.serious_critical, COLORS.total_cases_per_1m, COLORS.new_cases],
+        plotOptions: {
+            bar: {
+                columnWidth: '45%',
+                distributed: true,
+                dataLabels: {
+                    position: 'top'
+                  }
+            }
+        },
+        dataLabels: {
+            enabled:false
+        },
+        legend: {
+            show: false
+        },
+        series: [],
+        dataLabels: {
+            enabled: true,
+            dropShadow: {
+                enabled: true,
+                opacity: 1
+            }
+        },
+        xaxis: {
+            categories: [],
+            labels: {
+                style: {
+                    colors: [COLORS.serious_critical, COLORS.total_cases_per_1m, COLORS.new_cases],
+                    fontSize: '14px'
+                }
+            }
+        },
+    }
 
+    all_time_chart = new ApexCharts(document.querySelector('#all-time-chart'), options)
+
+    all_time_chart.render()
+}
+
+renderData = (world_data, status) => {
+    let res = []
+    switch (status) {
+        case CASE_STATUS.serious_critical:
+            res.push(world_data.Serious_Critical)
+            break
+        case CASE_STATUS.total_cases_per_1m:
+            res.push(world_data.TotCases_1M_Pop)
+            break
+        case CASE_STATUS.total_deaths_per_1m:
+            res.push(world_data.Deaths_1M_pop)
+    }
+    return res
+}
+
+loadAllTimeChart = async (country) => {
+
+    let seriousCases_data, totalDeathsPer1m_data,totalCasesPer1m_data
+    let country_data
+    if (isGlobal(country)) {
+        
+        console.log('Serious case: ',seriousCases_data = Math.round(renderData(summary, CASE_STATUS.serious_critical)))
+        console.log('Total cases per 1m population: ',totalCasesPer1m_data = Math.round(renderData(summary, CASE_STATUS.total_cases_per_1m)))
+        console.log('Total deaths per 1m population: ',totalDeathsPer1m_data = Math.round(renderData(summary, CASE_STATUS.total_deaths_per_1m)))
+
+    } else {
+        country_data = summaryData.find(function(e){
+                return e['Country']===country
+        })
+
+        console.log('Serious case: ',seriousCases_data = Math.round(renderData(country_data, CASE_STATUS.serious_critical)))
+        console.log('Total cases per 1m population: ',totalCasesPer1m_data = Math.round(renderData(country_data, CASE_STATUS.total_cases_per_1m)))
+        console.log('Total deaths per 1m population: ',totalDeathsPer1m_data = Math.round(renderData(country_data, CASE_STATUS.total_deaths_per_1m)))
+
+    }
+
+    let series = [{
+        name: 'Cases',
+        data: [{
+            x: 'Serious Cases', 
+            y: seriousCases_data
+        }, {
+            x: 'Total cases per 1m population',
+            y: totalCasesPer1m_data
+        }, {
+            x: 'Total deaths per 1m population',
+            y: totalDeathsPer1m_data}]
+        }]
+
+    all_time_chart.updateOptions({
+        series: series,
+        xaxis: {
+            categories: ['Serious Cases', 'Total cases per 1m population', 'Total deaths per 1m population']
+        }
+    })
+}
+
+initRecoveryRate = async () => {
+    let options = {
+        chart: {
+            type: 'radialBar',
+            height: '350'
+        },
+        series: [],
+        labels: ['Recovery rate'],
+        colors: [COLORS.recovered]
+
+    }
+
+    recover_rate_chart = new ApexCharts(document.querySelector('#recover-rate-chart'), options)
+
+    recover_rate_chart.render()
+}
+
+loadRecoveryRate = async (rate) => {
+    // Use updateSeries
+    recover_rate_chart.updateSeries([rate])
+}
+
+// darkmode switch
+
+initTheme = () => {
+    let dark_mode_switch = document.querySelector('#darkmode-switch')
+
+    dark_mode_switch.onclick = () => {
+        dark_mode_switch.classList.toggle('dark')
+        body.classList.toggle('dark')
+
+        setDarkChart(body.classList.contains('dark'))
+    }
+}
+
+setDarkChart = (dark) => {
+    let theme = {
+        theme: {
+            mode: dark ? 'dark' : 'light'
+        }
+    }
+    all_time_chart.updateOptions(theme)
+    days_chart.updateOptions(theme)
+    recover_rate_chart.updateOptions(theme)
 }
 
 // country select
